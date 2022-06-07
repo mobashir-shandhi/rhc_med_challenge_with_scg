@@ -3,6 +3,7 @@
 This code will estimate changes in the pulmonary artery pressure or pulmonary capillary wedge pressure due to 
 vasodilator challenge during Right Heart  Catheterization procedure using simulataneously recorded seismocardiogram
 signals recorded using a wearable chest patch.
+
 @author: mobashir shandhi
 """
 
@@ -105,8 +106,8 @@ plt.interactive(False)
 
 ##### Import Data: pressure values in csv and corresponing SCG frames in mat file
 #### 20s PA frame during baseline and vasodilator challenge from 20 subjects
-df = pd.read_csv('D:\Onedrive Gatech\OneDrive - Georgia Institute of Technology\Journal and Conferences\Journal on RHC Med Challenge\Data\Features\RHC_PA_med_features_20s_sys_dias_20201203.csv')
-scg_frame = loadmat('D:\Onedrive Gatech\OneDrive - Georgia Institute of Technology\Journal and Conferences\Journal on RHC Med Challenge\Data\Features/RHC_PA_med_frames_20s_sys_dias_20201203.mat')
+df = pd.read_csv('RHC_PA_med_features_20s_sys_dias_20201203.csv')
+scg_frame = loadmat('RHC_PA_med_frames_20s_sys_dias_20201203.mat')
 
 
 #### 20s PCWP frame during baseline and vasodilator challenge from 19 subjects
