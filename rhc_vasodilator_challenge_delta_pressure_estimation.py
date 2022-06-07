@@ -15,15 +15,16 @@ import seaborn as sns
 from sklearn.decomposition import PCA
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import LeaveOneGroupOut
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupKFold, GridSearchCV
 from sklearn import linear_model
 from sklearn.preprocessing import StandardScaler
 from scipy.io import loadmat
 from mpl_toolkits.mplot3d import Axes3D
 from dtw import dtw
 from sklearn import mixture
-from mlxtend.feature_selection import SequentialFeatureSelector as SFS
-from mlxtend.plotting import plot_sequential_feature_selection as plot_sfs
-
+from sklearn.feature_selection import SequentialFeatureSelector
+from sklearn.svm import SVR, LinearSVR
 
 
 # Next line to silence pyflakes. This import is needed.
@@ -111,8 +112,8 @@ scg_frame = loadmat('RHC_PA_med_frames_20s_sys_dias_20201203.mat')
 
 
 #### 20s PCWP frame during baseline and vasodilator challenge from 19 subjects
-#df = pd.read_csv('D:\Onedrive Gatech\OneDrive - Georgia Institute of Technology\Journal and Conferences\Journal on RHC Med Challenge\Data\Features\RHC_PCWP_med_features_20s_sys_dias_20201203.csv')
-#scg_frame = loadmat('D:\Onedrive Gatech\OneDrive - Georgia Institute of Technology\Journal and Conferences\Journal on RHC Med Challenge\Data\Features/RHC_PCWP_med_frames_20s_sys_dias_20201203.mat')
+#df = pd.read_csv('RHC_PCWP_med_features_20s_sys_dias_20201203.csv')
+#scg_frame = loadmat('RHC_PCWP_med_frames_20s_sys_dias_20201203.mat')
 
 
 
@@ -132,6 +133,8 @@ bl_med_list=scg_frame['bl_med_list_all_sub']
 #get the list of subjects to identify which frame belongs to which subject
 groups=scg_frame['subject_ids_for_frames']
 
+#get HF classification (HFrEF and HFpEF)
+hf_class=df['HF Classification']
 
 # get target variables and corresponding subject ids
 delta_pamp=df['Delta PAP'].values
@@ -211,145 +214,96 @@ for subjectNo in np.unique(groups):
 
 
 
+#############Create a training-testing and a seperate validation set using random sampling#############
+groups=np.unique(groups)
+X_train_test, X_val, y_train_test, y_val, groups_train_test, groups_val, hf_class_train_test, hf_class_val= train_test_split(dtw_distance_matrix, y, groups,hf_class, test_size=0.25, random_state=42, stratify=hf_class)
+
+#scaling the data
+standard_scaler=StandardScaler().fit(X_train_test)
+X_train_test = standard_scaler.transform(X_train_test)
+X_val = standard_scaler.transform(X_val)
 
 
-################plot R^2 between the target variable and DTW Disatances during Systolic Phase ################    
-d=[['AX_500ms',calculate_r2(y,dtw_distance_matrix[:,0])],['AY_500ms',calculate_r2(y,dtw_distance_matrix[:,1])],['AZ_500ms', calculate_r2(y,dtw_distance_matrix[:,2])],['AT_500ms', calculate_r2(y,dtw_distance_matrix[:,3])],['AX_IVC',calculate_r2(y,dtw_distance_matrix[:,4])],['AY_IVC',calculate_r2(y,dtw_distance_matrix[:,5])],['AZ_IVC',calculate_r2(y,dtw_distance_matrix[:,6])],['AT_IVC',calculate_r2(y,dtw_distance_matrix[:,7])],['AX_AVC',calculate_r2(y,dtw_distance_matrix[:,8])],['AY_AVC',calculate_r2(y,dtw_distance_matrix[:,9])],['AZ_AVC',calculate_r2(y,dtw_distance_matrix[:,10])],['AT_AVC',calculate_r2(y,dtw_distance_matrix[:,11])]]
-df=pd.DataFrame(data=d, columns=['SCG Axes Used','R2'])
+############Select 5 features using sequential feature selection using training-testing set data ###########
+#define a regression model for the feature selection
+reg_model = LinearSVR()
 
-
-
-plt.figure()
-sns.set_style('whitegrid', {'grid.linestyle':'--'})
-ax = sns.barplot(x="SCG Axes Used", y="R2", data=df,linewidth=1.5,edgecolor='.2',alpha=0.8, capsize=0.2)
-ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
-ax.spines['left'].set_color('black')
-ax.spines['right'].set_color('black')
-ax.spines['top'].set_color('black')
-ax.spines['bottom'].set_color('black')
-ax.spines['left'].set_linewidth(1)
-ax.spines['right'].set_linewidth(1)
-ax.spines['top'].set_linewidth(1)
-ax.spines['bottom'].set_linewidth(1)
-ax.set_title('RHC Med challenge\nR^2 between Delta PAMP and DTW Distance for Different SCG Axes',fontsize=12)
-plt.tight_layout()
-plt.ylim([0.0, 1.0])
-#plt.legend(loc="lower right",prop=fontP)
-plt.show()
-
-
-
-################plot R^2 between VO2 and Euclidean Disatances################    
-d=[['AX_Dias_500ms',calculate_r2(y,dtw_distance_matrix[:,12])],['AY_Dias_500ms',calculate_r2(y,dtw_distance_matrix[:,13])],['AZ_Dias_500ms', calculate_r2(y,dtw_distance_matrix[:,14])],['AT_Dias_500ms', calculate_r2(y,dtw_distance_matrix[:,15])],['AX_Dias_active',calculate_r2(y,dtw_distance_matrix[:,16])],['AY_Dias_active',calculate_r2(y,dtw_distance_matrix[:,17])],['AZ_Dias_active',calculate_r2(y,dtw_distance_matrix[:,18])],['AT_Dias_active',calculate_r2(y,dtw_distance_matrix[:,19])],['AX_Dias_passive',calculate_r2(y,dtw_distance_matrix[:,20])],['AY_Dias_passive',calculate_r2(y,dtw_distance_matrix[:,21])],['AZ_Dias_passive',calculate_r2(y,dtw_distance_matrix[:,22])],['AT_Dias_passive',calculate_r2(y,dtw_distance_matrix[:,23])]]
-df=pd.DataFrame(data=d, columns=['SCG Axes Used','R2'])
-
-
-
-plt.figure()
-sns.set_style('whitegrid', {'grid.linestyle':'--'})
-ax = sns.barplot(x="SCG Axes Used", y="R2", data=df,linewidth=1.5,edgecolor='.2',alpha=0.8, capsize=0.2)
-ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
-ax.spines['left'].set_color('black')
-ax.spines['right'].set_color('black')
-ax.spines['top'].set_color('black')
-ax.spines['bottom'].set_color('black')
-ax.spines['left'].set_linewidth(1)
-ax.spines['right'].set_linewidth(1)
-ax.spines['top'].set_linewidth(1)
-ax.spines['bottom'].set_linewidth(1)
-ax.set_title('RHC Med challenge\nR^2 between Delta PAMP and DTW Distance for Different SCG Axes',fontsize=12)
-plt.tight_layout()
-plt.ylim([0.0, 1.0])
-#plt.legend(loc="lower right",prop=fontP)
-plt.show()
-
-
-
-
-############Select 5 features using sequential feature selection###########
-X=dtw_distance_matrix
-X = StandardScaler().fit_transform(X)
-
-reg_model=linear_model.Ridge(alpha=0.5) #### best for Delta PAMP following our initial analysis
-
-
-
-sfs1 = SFS(reg_model, 
-           k_features=5,  
-           forward=True, 
-           floating=False, 
-           verbose=1,
-           scoring='r2',
-           n_jobs=-1,
-           cv=3)
-
-
+#define feature names from the input DTW array
 feature_set=['AX_500ms', 'AY_500ms', 'AZ_500ms', 'AT_500ms','AX_IVC','AY_IVC','AZ_IVC','AT_IVC','AX_EJ','AY_EJ','AZ_EJ','AT_EJ',
              'AX_Dias_500ms','AY_Dias_500ms','AZ_Dias_500ms','AT_Dias_500ms','AX_Dias_active','AY_Dias_active','AZ_Dias_active','AT_Dias_active','AX_Dias_passive','AY_Dias_passive','AZ_Dias_passive','AT_Dias_passive']
 
-sfs1 = sfs1.fit(X, y,custom_feature_names=feature_set)
-sfs1.subsets_
 
-
-####### the following portion of the code is to visualize the feature selection and selected features
-fig = plot_sfs(sfs1.get_metric_dict(), kind='std_err')
-plt.title('Sequential Forward Selection (w. StdErr)')
-plt.grid()
-plt.show()
-
-X_select = sfs1.transform(X)  # select
-
-select_features=sfs1.k_feature_names_
+sfs1 = SequentialFeatureSelector(reg_model, n_features_to_select=5, direction='forward',scoring='neg_root_mean_squared_error')
+sfs1.fit(X_train_test, y_train_test)
+select_features=sfs1.get_feature_names_out(input_features=feature_set)
+#print selected features
 print ('Selected features: ')
 print  (select_features)
 print ('\n')
 
-X=X_select
 
-####get feature importance/weights ##########
-fit=reg_model.fit(X,y)
+#transform the data to only use the selected features for the model development
+X_select_train_test = sfs1.transform(X_train_test)
+X_select_val = sfs1.transform(X_val)
+
+X_train_test=X_select_train_test
+X_val=X_select_val
+
+
+####get feature importance with SVR##########
+fit=reg_model.fit(X_train_test,y_train_test)
 weights=fit.coef_
 print('Feature Weights: ')
 print(weights)
 print('\n')
 
 
+##############perform grid search on training-testing set############
+estimator=svm.SVR() #regression model for this analysis
+param_dist = {
+            'kernel':('linear', 'rbf', 'poly','sigmoid'), 
+            'C':[ 0.1, 0.5, 1, 3, 5, 10, 100, 1000],
+            'degree' : [3,8],
+            'coef0' : [0.0001, 0.001, 0.01,0.1,0.5, 1.0, 10],
+            'gamma' : ('auto','scale')
+            }
+
+num_subjects=len(np.unique(groups_train_test))
+cv=GroupKFold(n_splits=num_subjects)
+
+
+grid_search = GridSearchCV(estimator=estimator, param_grid=param_dist, cv = cv,  n_jobs = -1,verbose=True,scoring='neg_root_mean_squared_error')
+grid_search.fit(X_train_test,y_train_test, groups=groups_train_test)
+
+best_grid = grid_search.best_estimator_
+print ("Best Grid")
+print (best_grid)
+#choosing the reg model from grid search
+reg_model=grid_search.best_estimator_ 
+
 
 
 ###################### Regression ##############
-groups=np.unique(groups)
+############# perform leave-one-out-cross-validation on the training-testing set #############
 logo = LeaveOneGroupOut()
 
-
-
-
 #initialize vectore to keep score for each fold
-
-y_all_predictions = np.zeros(y.shape)
-
+y_train_test_predictions = np.zeros(y_train_test.shape)
 
 
-for train, test in logo.split(X, y, groups=groups):
+
+for train, test in logo.split(X_train_test, y_train_test, groups=groups_train_test):
 
     #perform train test split for the current fold
-    X_train, X_test, y_train, y_test = X[train], X[test], y[train], y[test]
-
-
-
-#    standardize training and testing data
-    mean_train = np.mean(X_train, axis=0)
-    std_train = np.std(X_train, axis=0)
-#    X_train = (X_train - mean_train)/std_train
-#    X_test = (X_test - mean_train)/std_train
-    
+    X_train, X_test, y_train, y_test = X_train_test[train], X_train_test[test], y_train_test[train], y_train_test[test]   
    
-    model=reg_model # regression model is defined before in the feature selection portion
+    model=reg_model # regression model from the grid search portion
 
     model_trained = model.fit(X_train , y_train)
     y_predicted = model_trained.predict(X_test)  
     
 
-    y_all_predictions[test] = y_predicted
+    y_train_test_predictions[test] = y_predicted
 
     # printing the number in output console
     print('Subject No= ' + str(np.mean(groups[test])))
@@ -357,34 +311,86 @@ for train, test in logo.split(X, y, groups=groups):
 
 
 # calculate RMSE, NRMSE, R-square and pearson p_value between actual and predicted value.
-rmse=np.sqrt(mean_squared_error(y, y_all_predictions))
-rmse_normalized=rmse/np.mean(y)
-r_squared=calculate_r2(y, y_all_predictions)
-p_value=sp.stats.pearsonr(y, y_all_predictions)
+rmse=np.sqrt(mean_squared_error(y_train_test, y_train_test_predictions))
+rmse_normalized=rmse/np.mean(y_train_test)
+r_squared=calculate_r2(y_train_test, y_train_test_predictions)
+p_value=sp.stats.pearsonr(y_train_test, y_train_test_predictions)
 
 
 #print results
-print('Overall RMSE= ' + str(rmse))
-print('Overall Rsquared= ' + str(r_squared))
+print('Training-Testing Set Results')
+print('Training-Testing RMSE= ' + str(rmse))
+print('Rsquared= ' + str(r_squared))
 print('Pearson Corr-Coeff and P-value= ' + str(p_value))
-print('Overvall Normalized RMSE with mean = ' + str(rmse_normalized))
+print('Normalized RMSE = ' + str(rmse_normalized))
 
 
-#plot out of fold predictions against actual PEP
+#plot out of fold predictions against actual PAMP
 fig = plt.figure();
 cm=plt.cm.get_cmap('jet')
-pl=plt.scatter(y , y_all_predictions , c= groups, cmap= cm)
-plt.title('OOF R^2= ' + str(r_squared) +' \nRMSE Normalized with Mean= ' + str(rmse_normalized))
+pl=plt.scatter(y_train_test, y_train_test_predictions , c= groups_train_test, cmap= cm)
+plt.title('Train-Test Set OOF R^2= ' + str(r_squared) +' \nNRMSE= ' + str(rmse_normalized))
 plt.colorbar(pl)
 plt.show()
 
 
 # Bland Altman Plot for the y actual and y predicted
 fig = plt.figure();
-bland_altman_plot(y, y_all_predictions)
+bland_altman_plot(y_train_test, y_train_test_predictions)
 plt.title('Bland-Altman Plot')
 plt.ylabel('Actual-Predicted')
 plt.xlabel('(Actual+Predicted)/2')
 plt.show()
 
 
+############# validate the model on the independent validation set #############
+y_val_predictions = np.zeros(y_val.shape)
+
+#get predicted pressure change for each subject in the validation set
+for subjectNo in np.unique(groups_val):
+
+    #Train on the whole train set and test on the validation set subjects
+    X_val_sub = X_val[groups_val==subjectNo]
+    y_val_sub = y_val[groups_val==subjectNo]
+    
+    
+    #model training using traing_testing data
+    model_trained = model.fit(X_train_test ,y_train_test)
+    y_predicted = model_trained.predict(X_val_sub)  
+    
+    y_val_predictions[groups_val==subjectNo] = y_predicted
+    
+    print('Subject No= ' + str(np.mean(groups_val[groups_val==subjectNo])))
+    print('True Delta PAMP = ' + str(np.mean(y_test))+' Predicted Delta PAMP = ' + str(np.mean(y_predicted)))
+    
+    
+rmse_val=np.sqrt(mean_squared_error(y_val, y_val_predictions))
+rmse_val_normalized=rmse_val/np.mean(y_val)
+r_squared_val=calculate_r2(y_val, y_val_predictions)
+p_value_val=sp.stats.pearsonr(y_val, y_val_predictions)
+
+
+#print results
+print('Validation Set Results')
+print('RMSE= ' + str(rmse_val))
+print('Rsquared= ' + str(r_squared_val))
+print('Pearson Corr-Coeff and P-value= ' + str(p_value_val))
+print('Normalized RMSE = ' + str(rmse_val_normalized))
+
+
+#plot out of fold predictions against actual PEP
+fig = plt.figure();
+cm=plt.cm.get_cmap('jet')
+pl=plt.scatter(y_val , y_val_predictions , c= groups_val, cmap= cm)
+plt.title('Validation Set OOF R^2= ' + str(r_squared_val) +' \nRMSE Normalized= ' + str(rmse_val_normalized))
+plt.colorbar(pl)
+plt.show()
+
+
+# Bland Altman Plot for the y actual and y predicted
+fig = plt.figure();
+bland_altman_plot(y_val, y_val_predictions)
+plt.title('Bland-Altman Plot for Validation Set')
+plt.ylabel('Actual-Predicted')
+plt.xlabel('(Actual+Predicted)/2')
+plt.show()
