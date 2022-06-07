@@ -259,7 +259,7 @@ print('\n')
 
 
 ##############perform grid search on training-testing set############
-estimator=svm.SVR() #regression model for this analysis
+estimator=SVR() #regression model for this analysis
 param_dist = {
             'kernel':('linear', 'rbf', 'poly','sigmoid'), 
             'C':[ 0.1, 0.5, 1, 3, 5, 10, 100, 1000],
@@ -283,11 +283,11 @@ reg_model=grid_search.best_estimator_
 
 
 
-###################### Regression ##############
+###################### Regression ##########################
 ############# perform leave-one-out-cross-validation on the training-testing set #############
 logo = LeaveOneGroupOut()
 
-#initialize vectore to keep score for each fold
+#initialize vector to keep score for each fold
 y_train_test_predictions = np.zeros(y_train_test.shape)
 
 
