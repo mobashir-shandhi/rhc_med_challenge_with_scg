@@ -378,7 +378,7 @@ print('Pearson Corr-Coeff and P-value= ' + str(p_value_val))
 print('Normalized RMSE = ' + str(rmse_val_normalized))
 
 
-#plot out of fold predictions against actual PEP
+#plot out of fold predictions against actual PAMP
 fig = plt.figure();
 cm=plt.cm.get_cmap('jet')
 pl=plt.scatter(y_val , y_val_predictions , c= groups_val, cmap= cm)
